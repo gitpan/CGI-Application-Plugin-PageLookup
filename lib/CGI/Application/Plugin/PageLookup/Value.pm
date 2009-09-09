@@ -9,11 +9,11 @@ CGI::Application::Plugin::PageLookup::Value - Manage values scattered across a w
 
 =head1 VERSION
 
-Version 1.0
+Version 1.1
 
 =cut
 
-our $VERSION = '1.0';
+our $VERSION = '1.1';
 our $AUTOLOAD;
 
 =head1 DESCRIPTION
@@ -76,12 +76,13 @@ the cgiapp_table. However the internalId column can null, making the parameter a
 in the same language. The lang, internalId and param columns form the key of the table.
 
 Table: cgiapp_values
-Field       |Type                                                               |Null|Key |Default|Extra|
---------------------------------------------------------------------------------------------------------
-lang        |varchar(2)                                                         |NO  |    |NULL   |     |
-internalId  |unsigned numeric(10,0)                                             |YES |    |NULL   |     |
-param       |varchar(20)                                                        |NO  |    |NULL   |     |
-value       |text								|NO  |    |NULL   |     |
+
+ Field         Type                                                                Null Key  Default Extra 
+ ------------  ------------------------------------------------------------------- ---- ---- ------- -----
+ lang          varchar(2)                                                          NO        NULL          
+ internalId    unsigned numeric(10,0)                                              YES       NULL          
+ param         varchar(20)                                                         NO        NULL          
+ value         text								   NO        NULL          
 
 =head1 FUNCTIONS
 
@@ -156,7 +157,7 @@ sub AUTOLOAD {
 	return undef;
 }
 
-=head2 DESTRROY
+=head2 DESTROY
 
 We have to define DESTROY, because an autoloaded version would be bad.
 

@@ -34,16 +34,16 @@ CGI::Application::Plugin::PageLookup - Database driven model framework for CGI::
 
 =head1 VERSION
 
-Version 1.0
+Version 1.1
 
 =cut
 
-our $VERSION = '1.0';
+our $VERSION = '1.1';
 
 =head1 DESCRIPTION
 
 A model component for CGI::Application built around a table that has one row for each
-page and that provides aupport for multiple languages and the 'dot' notation in templates.
+page and that provides support for multiple languages and the 'dot' notation in templates.
 
 =head1 SYNOPSIS
 
@@ -150,36 +150,41 @@ nearby pages in the same language. The lang column is used to join the two pages
 to find some template structure like this:
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="<TMPL_VAR NAME="lang">-<TMPL_VAR NAME="collation">">
 ...
-</html>
+</html> 
 The priority, lastmod and changefreq columns are used in XML sitemaps as defined by http://www.sitemaps.org/protocol.php.
 The changefreq field is also used in setting the expiry header. Since these fields are not expected to be in general usage,
 by default they are deleted just before being sent to the template. The lineage and rank columns are used by menu/sitemap 
 functionality and together should be unique.
 
 Table: cgiapp_structure
-Field       |Type                                                               |Null|Key |Default|Extra|
---------------------------------------------------------------------------------------------------------
-internalId  |unsigned numeric(10,0)						|NO  |PRI |NULL   |     |
-template    |varchar(20)                                                        |NO  |    |NULL   |     |
-lastmod     |date                                                               |NO  |    |NULL   |     |
-changefreq  |enum('always','hourly','daily','weekly','monthly','yearly','never')|NO  |    |NULL   |     |
-priority    |decimal(3,3)                                                       |YES |    |NULL   |     |
-lineage     |varchar(255)							|NO  |    |NULL   |	|
-rank	    |unsigned numeric(10,0)						|NO  |    |NULL   |	|
+
+ Field        Type                                                                Null Key  Default Extra 
+ ------------ ------------------------------------------------------------------- ---- ---- ------- -----
+ internalId   unsigned numeric(10,0)                                              NO   PRI  NULL          
+ template     varchar(20)                                                         NO        NULL          
+ lastmod      date                                                                NO        NULL          
+ changefreq   enum('always','hourly','daily','weekly','monthly','yearly','never') NO        NULL          
+ priority     decimal(3,3)                                                        YES       NULL          
+ lineage      varchar(255)                                                        NO        NULL    	 
+ rank	      unsigned numeric(10,0)                                              NO        NULL    	 
 
 Table: cgiapp_pages
-Field       |Type                                                               |Null|Key |Default|Extra|
---------------------------------------------------------------------------------------------------------
-pageId      |varchar(255)                                                       |NO  |UNI |NULL   |     |
-lang        |varchar(2)								|NO  |PRI |NULL   |     |
-internalId  |unsigned numeric(10,0)						|NO  |PRI |NULL   |     |
+
+ Field        Type                                                                Null Key  Default Extra 
+ ------------ ------------------------------------------------------------------- ---- ---- ------- -----
+ pageId       varchar(255)                                                        NO   UNI  NULL          
+ lang         varchar(2)       	                                                  NO   PRI  NULL          
+ internalId   unsigned numeric(10,0)                                              NO   PRI  NULL          
+
 + any custom columns that the web application might require.
 
 Table: cgiapp_lang
-Field       |Type                                                               |Null|Key |Default|Extra|
---------------------------------------------------------------------------------------------------------
-lang        |varchar(2)                                                         |NO  |PRI |NULL   |     |
-collation   |varchar(2)                                                         |NO  |    |NULL   |     |
+
+ Field        Type                                                                Null Key  Default Extra 
+ ------------ ------------------------------------------------------------------- ---- ---- ------- -----
+ lang         varchar(2)                                                          NO   PRI  NULL          
+ collation    varchar(2)                                                          NO        NULL          
+
 + any custom columns that the web application might require.
 
 =head1 EXPORT

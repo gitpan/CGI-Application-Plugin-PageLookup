@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               CGI-Application-Plugin-PageLookup
-version:            1.0
+version:            1.1
 abstract:           Database driven model framework for CGI::Applicaition
 author:
     - Nicholas Bamber <nicholas@periapt.co.uk>
@@ -11,8 +11,11 @@ configure_requires:
 build_requires:
     ExtUtils::MakeMaker:  0
 requires:
-    CGI::Application:  0
-    Test::More:        0
+    CGI::Application:     0
+    CGI::Application::Plugin::DBH:  0
+    CGI::Application::Plugin::Forward:  0
+    HTML::Template::Pluggable:  0
+    Test::More:           0
 no_index:
     directory:
         - t
