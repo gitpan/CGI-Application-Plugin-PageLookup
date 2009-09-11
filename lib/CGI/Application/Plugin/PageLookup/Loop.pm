@@ -9,11 +9,11 @@ CGI::Application::Plugin::PageLookup::Loop - Manage list structures in a website
 
 =head1 VERSION
 
-Version 1.2
+Version 1.3
 
 =cut
 
-our $VERSION = '1.2';
+our $VERSION = '1.3';
 our $AUTOLOAD;
 
 =head1 DESCRIPTION
@@ -130,17 +130,21 @@ This module depends on only one extra table: cgiapp_loops. The lang and internal
 the cgiapp_table. However the internalId column can null, making the parameter available to all pages
 in the same language. The key is formed by all of the columns except for the value.
 
-Table: cgiapp_loops
+=over 
 
- Field        Type                                                                Null Key  Default Extra|
+=item Table: cgiapp_loops
+
+ Field        Type                                                                Null Key  Default Extra
  ------------ ------------------------------------------------------------------- ---- ---- ------- -----
- lang         varchar(2)                                                          NO        NULL          
- internalId   unsigned numeric(10,0)                                              YES       NULL          
- loopName     varchar(20)							  NO        NULL          
- lineage      varchar(255)							  NO                      
- rank	      unsigned numeric(2,0)						  NO   	    0             
- param        varchar(20)                                                         NO        NULL          
+ lang         varchar(2)                                                          NO   UNI  NULL          
+ internalId   unsigned numeric(10,0)                                              YES  UNI  NULL          
+ loopName     varchar(20)							  NO   UNI  NULL          
+ lineage      varchar(255)							  NO   UNI                
+ rank	      unsigned numeric(2,0)						  NO   UNI  0             
+ param        varchar(20)                                                         NO   UNI  NULL          
  value        text								  NO        NULL          
+
+=back
 
 The loopName is the parameter name of the TMPL_LOOP structure. The rank indicates which iteration of the loop
 this row is instantiating. The lineage is a comma separated list of ranks so that we know what part of a nested
@@ -150,7 +154,7 @@ loop structure this row instantiates. For a top-level parameter this will always
 
 =head2 new
 
-A constructor folowing the requirements set out in L<CGI::Application::Plugin::PageLookup>.
+A constructor following the requirements set out in L<CGI::Application::Plugin::PageLookup>.
 
 =cut
 
@@ -316,7 +320,7 @@ sub __populate_lower_loops {
 }
 
 
-=head2 DESTRROY
+=head2 DESTROY
 
 We have to define DESTROY, because an autoloaded version would be bad.
 

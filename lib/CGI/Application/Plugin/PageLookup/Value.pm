@@ -9,17 +9,17 @@ CGI::Application::Plugin::PageLookup::Value - Manage values scattered across a w
 
 =head1 VERSION
 
-Version 1.2
+Version 1.3
 
 =cut
 
-our $VERSION = '1.2';
+our $VERSION = '1.3';
 our $AUTOLOAD;
 
 =head1 DESCRIPTION
 
 This module allows the management of template variable instantiation across a website.
-You can specialize a default value for a parameter (without requiring it to be used on every page)
+You can specialise a default value for a parameter (without requiring it to be used on every page)
 and override that value for specific pages. Or you can merely set the value for individual pages.
 This depends on L<CGI::Application::Plugin::PageLookup>. For loops see L<CGI::Application::Plugin::PageLookup::Loop>.
 
@@ -75,20 +75,24 @@ This module depends on only one extra table: cgiapp_values. The lang and interna
 the cgiapp_table. However the internalId column can null, making the parameter available to all pages
 in the same language. The lang, internalId and param columns form the key of the table.
 
-Table: cgiapp_values
+=over 
+
+=item Table: cgiapp_values
 
  Field         Type                                                                Null Key  Default Extra 
  ------------  ------------------------------------------------------------------- ---- ---- ------- -----
- lang          varchar(2)                                                          NO        NULL          
- internalId    unsigned numeric(10,0)                                              YES       NULL          
- param         varchar(20)                                                         NO        NULL          
+ lang          varchar(2)                                                          NO   UNI  NULL          
+ internalId    unsigned numeric(10,0)                                              YES  UNI  NULL          
+ param         varchar(20)                                                         NO   UNI  NULL          
  value         text								   NO        NULL          
+
+=back
 
 =head1 FUNCTIONS
 
 =head2 new
 
-A constructor folowing the requirements set out in L<CGI::Application::Plugin::PageLookup>.
+A constructor following the requirements set out in L<CGI::Application::Plugin::PageLookup>.
 
 =cut
 
