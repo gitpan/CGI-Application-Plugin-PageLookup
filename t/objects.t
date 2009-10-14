@@ -2,34 +2,25 @@
 
 use strict;
 use warnings;
-use Test::More tests => 16;
+use Test::More;
+use Test::Database;
 use Test::Differences;
 use lib qw(t/lib);
 
+# get all available handles
+my @handles = Test::Database->handles({dbd=>'SQLite'},{dbd=>'mysql'});
+
+# plan the tests
+plan tests => 2 + 15 * @handles;
+
 BEGIN {
-	use_ok( 'CGI::Application::Plugin::PageLookup' );
+        use_ok( 'HTML::Template' );
+        use_ok( 'CGI::Application::Plugin::PageLookup' );
 }
 
 use DBI;
-unlink "t/dbfile";
-
-my $dbh = DBI->connect("dbi:SQLite:t/dbfile","","");
-$dbh->do("create table cgiapp_pages (pageId, lang, internalId, home, path)");
-$dbh->do("create table cgiapp_structure (internalId, template, lastmod, changefreq, priority)");
-$dbh->do("create table cgiapp_lang (lang, collation)");
-$dbh->do("insert into  cgiapp_pages (pageId, lang, internalId, home, path) values('en/test1', 'en', 0, 'HOME', 'PATH')");
-$dbh->do("insert into  cgiapp_pages (pageId, lang, internalId, home, path) values('en/test2', 'en', 1, 'HOME1', 'PATH1')");
-$dbh->do("insert into  cgiapp_pages (pageId, lang, internalId, home, path) values('de/test1', 'de', 0, 'HEIMAT', 'Stra&szlig;e')");
-$dbh->do("insert into  cgiapp_pages (pageId, lang, internalId, home, path) values('de/test2', 'de', 1, 'HEIMAT1', 'Stra&szlig;e1')");
-$dbh->do("insert into  cgiapp_pages (pageId, lang, internalId, home, path) values('en/notfound', 'en', 2, 'HOME', 'PATH')");
-$dbh->do("insert into  cgiapp_pages (pageId, lang, internalId, home, path) values('de/notfound', 'de', 2, 'HEIMAT', 'Stra&szlig;e3')");
-$dbh->do("insert into  cgiapp_lang (lang, collation) values('en','GB')");
-$dbh->do("insert into  cgiapp_lang (lang, collation) values('de','DE')");
-$dbh->do("insert into  cgiapp_structure(internalId, template, lastmod, changefreq, priority) values(0,'t/templ/testLO.tmpl', '2009-8-11', 'daily', 0.8)");
-$dbh->do("insert into  cgiapp_structure(internalId, template, lastmod, changefreq, priority) values(1,'t/templ/testLO.tmpl', '2007-8-11', 'yearly', 0.7)");
-$dbh->do("insert into  cgiapp_structure(internalId, template, lastmod, changefreq, priority) values(2,'t/templ/testNLO.tmpl', '2009-8-11', 'never', NULL)");
-
 use CGI;
+use TestApp;
 
 $ENV{CGI_APP_RETURN_ONLY} = 1;
 my $params = {remove=>['template','pageId','priority','internalId','lastmod','changefreq'],notfound_stuff=>1,xml_sitemap_base_url=>'http://xml/', 
@@ -43,6 +34,7 @@ my $params = {remove=>['template','pageId','priority','internalId','lastmod','ch
 	}
 };
 
+
 sub response_like {
         my ($app, $header_re, $body_re, $comment) = @_;
 
@@ -54,14 +46,31 @@ sub response_like {
         eq_or_diff($body,      $body_re,       "$comment (body match)");
 }
 
-SKIP: {
-	eval { require HTML::Template::Pluggable;};
-	skip "HTML::Template::Pluggable required", 15 if $@; 
-	eval { require UNIVERSAL::require;};
-	skip "UNIVERSAL::require required", 15 if $@; 
-	eval { require TestApp;};
-	skip "TestApp required", 15 if $@; 
-	
+# run the tests
+for my $handle (@handles) {
+       diag "Testing with " . $handle->dbd();    # mysql, SQLite, etc.
+
+       # let $handle do the connect()
+       my $dbh = $handle->dbh();
+       drop_tables($dbh) if $ENV{DROP_TABLES};
+       $params->{'::Plugin::DBH::dbh_config'}=[$dbh];
+
+       $dbh->do("create table cgiapp_pages (pageId varchar(255), lang varchar(2), internalId int, home TEXT, path TEXT)");
+       $dbh->do("create table cgiapp_structure (internalId int, template varchar(20), lastmod DATE, changefreq varchar(20), priority decimal(3,1))");
+       $dbh->do("create table cgiapp_lang (lang varchar(2), collation varchar(2) )");
+ 
+$dbh->do("insert into  cgiapp_pages (pageId, lang, internalId, home, path) values('en/test1', 'en', 0, 'HOME', 'PATH')");
+$dbh->do("insert into  cgiapp_pages (pageId, lang, internalId, home, path) values('en/test2', 'en', 1, 'HOME1', 'PATH1')");
+$dbh->do("insert into  cgiapp_pages (pageId, lang, internalId, home, path) values('de/test1', 'de', 0, 'HEIMAT', 'Stra&szlig;e')");
+$dbh->do("insert into  cgiapp_pages (pageId, lang, internalId, home, path) values('de/test2', 'de', 1, 'HEIMAT1', 'Stra&szlig;e1')");
+$dbh->do("insert into  cgiapp_pages (pageId, lang, internalId, home, path) values('en/notfound', 'en', 4000, 'HOME', 'PATH')");
+$dbh->do("insert into  cgiapp_pages (pageId, lang, internalId, home, path) values('de/notfound', 'de', 4000, 'HEIMAT', 'Stra&szlig;e3')");
+$dbh->do("insert into  cgiapp_lang (lang, collation) values('en','GB')");
+$dbh->do("insert into  cgiapp_lang (lang, collation) values('de','DE')");
+$dbh->do("insert into  cgiapp_structure(internalId, template, lastmod, changefreq, priority) values(0,'t/templ/testLO.tmpl', '2009-8-11', 'daily', 0.8)");
+$dbh->do("insert into  cgiapp_structure(internalId, template, lastmod, changefreq, priority) values(1,'t/templ/testLO.tmpl', '2007-8-11', 'yearly', 0.7)");
+$dbh->do("insert into  cgiapp_structure(internalId, template, lastmod, changefreq, priority) values(4000,'t/templ/testNLO.tmpl', '2009-8-11', 'never', NULL)");
+
 {
         my $app = TestApp->new(QUERY => CGI->new(""), PARAMS=>$params);
         isa_ok($app, 'CGI::Application');
@@ -248,5 +257,15 @@ EOS
                 'TestApp, notfound'
         );
 }
+        drop_tables($dbh);
 }
+
+sub drop_tables {
+	my $dbh = shift;
+
+	$dbh->do("drop table cgiapp_pages");
+       $dbh->do("drop table cgiapp_structure");
+       $dbh->do("drop table cgiapp_lang");
+}
+
 

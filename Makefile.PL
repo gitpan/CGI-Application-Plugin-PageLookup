@@ -2,7 +2,7 @@ use strict;
 use warnings;
 use ExtUtils::MakeMaker;
 
-WriteMakefile(
+my %conf = (
     NAME                => 'CGI::Application::Plugin::PageLookup',
     AUTHOR              => q{Nicholas Bamber <nicholas@periapt.co.uk>},
     VERSION_FROM        => 'lib/CGI/Application/Plugin/PageLookup.pm',
@@ -23,7 +23,22 @@ WriteMakefile(
 	'UNIVERSAL::require'=>0,
 	'Test::Differences' => 0,
         'Test::More' => 0,
+	'Test::Database' => '1.07',
+	'XML::LibXML'=>0
+    },
+    META_MERGE    => {
+        resources => {
+            repository => 'http://github.com/periapt/cgi-application-plugin-pagelookup',
+        },
     },
     dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
     clean               => { FILES => 'CGI-Application-Plugin-PageLookup-*' },
 );
+
+unless (eval { ExtUtils::MakeMaker->VERSION(6.46) }) {
+    delete $conf{META_MERGE};
+}
+
+WriteMakefile(%conf);
+
+

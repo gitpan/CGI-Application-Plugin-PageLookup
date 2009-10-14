@@ -2,20 +2,59 @@
 
 use strict;
 use warnings;
-use Test::More tests => 7;
+use Test::More;
+use Test::Database;
 use Test::Differences;
 use lib qw(t/lib);
 
+# get all available handles
+my @handles = Test::Database->handles({dbd=>'SQLite'},{dbd=>'mysql'});
+
+# plan the tests
+plan tests => 2 + 7 * @handles;
+
+BEGIN {
+        use_ok( 'HTML::Template' );
+        use_ok( 'CGI::Application::Plugin::PageLookup' );
+}
+
 use DBI;
-unlink "t/dbfile";
+use CGI;
+use TestApp;
 
+$ENV{CGI_APP_RETURN_ONLY} = 1;
+my $params = {remove=>['template','pageId','internalId','changefreq'], 
+	template_params=>{case_sensitive=>1},
+	objects=>{
+		loop=>'CGI::Application::Plugin::PageLookup::Menu'
+	}
+};
 
-my $dbh = DBI->connect("dbi:SQLite:t/dbfile","","");
-$dbh->do("create table cgiapp_pages (pageId, lang, internalId, title)");
-$dbh->do("create table cgiapp_structure (internalId, template, changefreq, priority, lineage, rank)");
-$dbh->do("create table cgiapp_lang (lang, collation)");
-$dbh->do("create table cgiapp_values (lang, internalId, param, value)");
-$dbh->do("create table cgiapp_loops (lang, internalId, loopName, lineage, rank, param, value)");
+sub response_like {
+        my ($app, $header_re, $body_re, $comment) = @_;
+
+        local $ENV{CGI_APP_RETURN_ONLY} = 1;
+        my $output = $app->run;
+        my ($header, $body) = split /\r\n\r\n/m, $output;
+        $header =~ s/\r\n/|/g;
+        like($header, $header_re, "$comment (header match)");
+        eq_or_diff($body,      $body_re,       "$comment (body match)");
+}
+
+# run the tests
+for my $handle (@handles) {
+       diag "Testing with " . $handle->dbd();    # mysql, SQLite, etc.
+
+       # let $handle do the connect()
+       my $dbh = $handle->dbh();
+       drop_tables($dbh) if $ENV{DROP_TABLES};
+       $params->{'::Plugin::DBH::dbh_config'}=[$dbh];
+
+       $dbh->do("create table cgiapp_pages (pageId varchar(255), lang varchar(2), internalId int, title TEXT)");
+       $dbh->do("create table cgiapp_structure (internalId int, template varchar(20), lastmod DATE, changefreq varchar(20), priority decimal(3,1), lineage varchar(255), rank int)");
+       $dbh->do("create table cgiapp_lang (lang varchar(2), collation varchar(2))");
+#$dbh->do("create table cgiapp_values (lang, internalId, param, value)");
+#$dbh->do("create table cgiapp_loops (lang, internalId, loopName, lineage, rank, param, value)");
 $dbh->do("insert into  cgiapp_pages (pageId, lang, internalId, title) values('en/rabbit', 'en', 0, 'Rabbit')");
 $dbh->do("insert into  cgiapp_pages (pageId, lang, internalId, title) values('en/dog', 'en', 1, 'Dog')");
 $dbh->do("insert into  cgiapp_pages (pageId, lang, internalId, title) values('en/cow', 'en', 2, 'Cow')");
@@ -52,35 +91,6 @@ $dbh->do("insert into  cgiapp_structure(internalId, template, changefreq, priori
 $dbh->do("insert into  cgiapp_structure(internalId, template, changefreq, priority, lineage, rank) values(9,'t/templ/testM.tmpl', 'daily', 1, '1,0', 0)");
 $dbh->do("insert into  cgiapp_structure(internalId, template, changefreq, priority, lineage, rank) values(10,'t/templ/testM.tmpl', 'daily', 1, '1,2', 0)");
 
-use CGI;
-
-$ENV{CGI_APP_RETURN_ONLY} = 1;
-my $params = {remove=>['template','pageId','internalId','changefreq'], 
-	template_params=>{case_sensitive=>1},
-	objects=>{
-		loop=>'CGI::Application::Plugin::PageLookup::Menu'
-	}
-};
-
-sub response_like {
-        my ($app, $header_re, $body_re, $comment) = @_;
-
-        local $ENV{CGI_APP_RETURN_ONLY} = 1;
-        my $output = $app->run;
-        my ($header, $body) = split /\r\n\r\n/m, $output;
-        $header =~ s/\r\n/|/g;
-        like($header, $header_re, "$comment (header match)");
-        eq_or_diff($body,      $body_re,       "$comment (body match)");
-}
-
-SKIP: {
-	eval { require HTML::Template::Pluggable;};
-	skip "HTML::Template::Pluggable required", 7 if $@; 
-	eval { require UNIVERSAL::require;};
-	skip "UNIVERSAL::require required", 7 if $@; 
-	eval { require TestApp;};
-	skip "TestApp required", 7 if $@; 
-	
 {
         my $app = TestApp->new(QUERY => CGI->new(""), PARAMS=>$params);
         isa_ok($app, 'CGI::Application');
@@ -287,5 +297,17 @@ EOS
         );
 }
 
+        drop_tables($dbh);
 }
+
+sub drop_tables {
+	my $dbh = shift;
+
+	$dbh->do("drop table cgiapp_pages");
+       $dbh->do("drop table cgiapp_structure");
+       $dbh->do("drop table cgiapp_lang");
+#       $dbh->do("drop table cgiapp_values");
+#       $dbh->do("drop table cgiapp_loops");
+}
+
 

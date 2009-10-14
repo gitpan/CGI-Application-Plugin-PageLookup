@@ -2,17 +2,58 @@
 
 use strict;
 use warnings;
-use Test::More tests => 9;
+use Test::More;
+use Test::Database;
 use Test::Differences;
 use lib qw(t/lib);
 
-use DBI;
-unlink "t/dbfile";
+# get all available handles
+my @handles = Test::Database->handles({dbd=>'SQLite'},{dbd=>'mysql'});
 
-my $dbh = DBI->connect("dbi:SQLite:t/dbfile","","");
-$dbh->do("create table cgiapp_pages (pageId, lang, internalId)");
-$dbh->do("create table cgiapp_structure (internalId, template, changefreq)");
-$dbh->do("create table cgiapp_lang (lang, collation, english, german, french, first, second, third)");
+# plan the tests
+plan tests => 2 + 9 * @handles;
+
+BEGIN {
+        use_ok( 'HTML::Template' );
+        use_ok( 'CGI::Application::Plugin::PageLookup' );
+}
+
+use DBI;
+use CGI;
+use TestApp;
+
+$ENV{CGI_APP_RETURN_ONLY} = 1;
+my $params = {remove=>['template','pageId','internalId','changefreq'], 
+	template_params=>{global_vars=>1},
+	objects=>{
+		href=>'CGI::Application::Plugin::PageLookup::Href'
+	}
+};
+
+sub response_like {
+        my ($app, $header_re, $body_re, $comment) = @_;
+
+        local $ENV{CGI_APP_RETURN_ONLY} = 1;
+        my $output = $app->run;
+        my ($header, $body) = split /\r\n\r\n/m, $output;
+        $header =~ s/\r\n/|/g;
+        like($header, $header_re, "$comment (header match)");
+        eq_or_diff($body,      $body_re,       "$comment (body match)");
+}
+
+# run the tests
+for my $handle (@handles) {
+       diag "Testing with " . $handle->dbd();    # mysql, SQLite, etc.
+
+       # let $handle do the connect()
+       my $dbh = $handle->dbh();
+       drop_tables($dbh) if $ENV{DROP_TABLES};
+       $params->{'::Plugin::DBH::dbh_config'}=[$dbh];
+
+       $dbh->do("create table cgiapp_pages (pageId varchar(255), lang varchar(2), internalId int)");
+       $dbh->do("create table cgiapp_structure (internalId int, template varchar(20), changefreq varchar(20))");
+       $dbh->do("create table cgiapp_lang (lang varchar(2), collation varchar(2), english TEXT, german TEXT, french TEXT, first TEXT, second TEXT, third TEXT)");
+ 
 $dbh->do("insert into  cgiapp_pages (pageId, lang, internalId) values('en/href', 'en', 0)");
 $dbh->do("insert into  cgiapp_pages (pageId, lang, internalId) values('en/first', 'en', 1)");
 $dbh->do("insert into  cgiapp_pages (pageId, lang, internalId) values('en/second', 'en', 2)");
@@ -33,37 +74,6 @@ $dbh->do("insert into  cgiapp_structure(internalId, template, changefreq) values
 $dbh->do("insert into  cgiapp_structure(internalId, template, changefreq) values(2,'t/templ/testJ.tmpl', 'daily')");
 $dbh->do("insert into  cgiapp_structure(internalId, template, changefreq) values(3,'t/templ/testJ.tmpl', 'daily')");
 
-
-use CGI;
-
-$ENV{CGI_APP_RETURN_ONLY} = 1;
-my $params = {remove=>['template','pageId','internalId','changefreq'], 
-	template_params=>{global_vars=>1},
-	objects=>{
-		href=>'CGI::Application::Plugin::PageLookup::Href'
-	}
-};
-
-
-sub response_like {
-        my ($app, $header_re, $body_re, $comment) = @_;
-
-        local $ENV{CGI_APP_RETURN_ONLY} = 1;
-        my $output = $app->run;
-        my ($header, $body) = split /\r\n\r\n/m, $output;
-        $header =~ s/\r\n/|/g;
-        like($header, $header_re, "$comment (header match)");
-        eq_or_diff($body,      $body_re,       "$comment (body match)");
-}
-
-SKIP: {
-	eval { require HTML::Template::Pluggable;};
-	skip "HTML::Template::Pluggable required", 9 if $@; 
-	eval { require UNIVERSAL::require;};
-	skip "UNIVERSAL::require required", 9 if $@; 
-	eval { require TestApp;};
-	skip "TestApp required", 9 if $@; 
-	
 {
         my $app = TestApp->new(QUERY => CGI->new(""), PARAMS=>$params);
         isa_ok($app, 'CGI::Application');
@@ -161,7 +171,15 @@ EOS
                 $html,
                 'TestApp, French'
         );
+	
+}
+	drop_tables($dbh);
+
 }
 
-
+sub drop_tables {
+	my $dbh = shift;
+	$dbh->do("drop table cgiapp_pages");
+       $dbh->do("drop table cgiapp_structure");
+       $dbh->do("drop table cgiapp_lang");
 }
