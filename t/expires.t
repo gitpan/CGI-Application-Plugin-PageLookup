@@ -8,12 +8,14 @@ use Test::Differences;
 use lib qw(t/lib);
 
 # get all available handles
-my @handles = Test::Database->handles({dbd=>'SQLite'},{dbd=>'mysql'});
-
-# plan the tests
-plan tests => 2 + 33 * @handles;
+my @handles;
 
 BEGIN {
+        @handles  = Test::Database->handles({dbd=>'SQLite'},{dbd=>'mysql'});
+
+        # plan the tests
+        plan tests => 2 + 33 * @handles;
+
         use_ok( 'HTML::Template' );
         use_ok( 'CGI::Application::Plugin::PageLookup' );
 }
@@ -279,10 +281,11 @@ EOS
 
 	ok(scalar(@{$xpc->findnodes('/x:urlset/x:url',$got)}) == scalar(@{$xpc->findnodes('/x:urlset/x:url',$expected)}), "number of pages");
 	for(my $i = 1; $i <= 4; $i++) {
-		ok($xpc->findnodes("/x:urlset/x:url[$i]/x:loc/text()", $got)->[0]->toString eq $xpc->findnodes("/x:urlset/x:url[$i]/x:loc/text()", $expected)->[0]->toString, "loc[$i]");
-		ok($xpc->findnodes("/x:urlset/x:url[$i]/x:changefreq/text()", $got)->[0]->toString eq $xpc->findnodes("/x:urlset/x:url[$i]/x:changefreq/text()", $expected)->[0]->toString, "changefreq[$i]");
-		ok(abs($xpc->findnodes("/x:urlset/x:url[$i]/x:priority/text()", $got)->[0]->toString - $xpc->findnodes("/x:urlset/x:url[$i]/x:priority/text()", $expected)->[0]->toString) < 0.000000001, "priority[$i]");
-		ok($xpc->findnodes("/x:urlset/x:url[$i]/x:lastmod/text()", $got)->[0]->toString eq $xpc->findnodes("/x:urlset/x:url[$i]/x:lastmod/text()", $expected)->[0]->toString, "lastmod[$i]");
+		my $text = $xpc->findnodes("/x:urlset/x:url[$i]/x:loc/text()", $got)->[0]->toString;
+		ok($text eq $xpc->findnodes("/x:urlset/x:url[x:loc/text()='$text']/x:loc/text()", $expected)->[0]->toString, "loc[$i]");
+		ok($xpc->findnodes("/x:urlset/x:url[$i]/x:changefreq/text()", $got)->[0]->toString eq $xpc->findnodes("/x:urlset/x:url[x:loc/text()='$text']/x:changefreq/text()", $expected)->[0]->toString, "changefreq[$i]");
+		ok(abs($xpc->findnodes("/x:urlset/x:url[$i]/x:priority/text()", $got)->[0]->toString - $xpc->findnodes("/x:urlset/x:url[x:loc/text()='$text']/x:priority/text()", $expected)->[0]->toString) < 0.000000001, "priority[$i]");
+		ok($xpc->findnodes("/x:urlset/x:url[$i]/x:lastmod/text()", $got)->[0]->toString eq $xpc->findnodes("/x:urlset/x:url[x:loc/text()='$text']/x:lastmod/text()", $expected)->[0]->toString, "lastmod[$i]");
 	}
 }
 	drop_tables($dbh);
