@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               CGI-Application-Plugin-PageLookup
-version:            1.6_2
+version:            1.6_3
 abstract:           Database driven model framework for CGI::Application
 author:
     - Nicholas Bamber <nicholas@periapt.co.uk>
