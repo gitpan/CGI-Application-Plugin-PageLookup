@@ -10,12 +10,11 @@ CGI::Application::Plugin::PageLookup::Menu - Support for consistent menus across
 
 =head1 VERSION
 
-Version 1.6_3
+Version 1.6_4
 
 =cut
 
-our $VERSION = '1.6_3';
-our $AUTOLOAD;
+our $VERSION = '1.6_4';
 
 =head1 DESCRIPTION
 
@@ -152,24 +151,40 @@ sub new {
 
 This function is specified in the template where additional columns are specified. 
 If no arguments are specified only the 'pageId' column is returned for each menu item.
-Additional arguments should be specified as a single comma separated string.
+Additional arguments should be specified either as a single comma separated string (deprecated)
+or as multiple arguments.
 
 =cut
 
 sub structure {
 	my $self = shift;
-	my $param = shift || "";
+	my @params = @_;
+	my $template = "$self->{name}.structure('";
+	if (scalar(@params) == 1) {
+		# legacy case
+		$template .= "$params[0]')";
+		@params = split /,/, $params[0];
+	}
+	else {
+		$template .= join "','", @params;
+		$template .= "')";
+	}
+	return $self->__structure(\@params, "", [$template]);
+}
+
+sub __structure {
+	my $self = shift;
+	my @params = @{shift || []};
 
         # $dlineage are the "breadcrumbs" required to navigate our way through the database
 	# and corresponds to the 'lineage' column on the cgiapp_structure table.
 	my $dlineage = shift;
-	$dlineage = "" unless defined $dlineage;
+	croak "database lineage missing" unless defined $dlineage;
 
 	# $tlineage are the "breadcrumbs" required to navigate our way through the HTML::Template structure.
-	# It corresponds to the ARRAY ref used in $template->query(loop=> [....]) only that the
-	# post "dot" string of the final array member (aka structure('$param')) is missing.
+	# It corresponds to the ARRAY ref used in $template->query(loop=> [....]).
 	my $tlineage = shift;
-	$tlineage = [$self->{name}] unless defined $tlineage;
+	croak "template lineage missing" unless defined $tlineage;
 
         my $prefix = $self->{cgiapp}->pagelookup_prefix(%{$self->{config}});
         my $page_id = $self->{page_id};
@@ -181,11 +196,11 @@ sub structure {
 	$self->{work_to_be_done} = [] unless exists $self->{work_to_be_done};
 
 	# generate SQL: get menu structure but optionally pull extra columns from cgiapp_pages
-	my @params = split /,/ , $param;
+	my @params_sql;
 	foreach my $p (@params) {
-		$p = ", p2.$p";
+		push @params_sql, ", p2.$p";
 	}
-	my $param_sql = join "", @params;
+	my $param_sql = join "", @params_sql;
         my $sql = "SELECT s.rank, p2.pageId $param_sql FROM ${prefix}structure s, ${prefix}pages p2, ${prefix}pages p1 WHERE p1.lang = p2.lang AND s.internalId = p2.internalId AND p1.pageId = '$page_id' AND s.lineage = '$dlineage' AND s.priority IS NOT NULL ORDER BY s.rank ASC";
 
 	# First one pass over the loop
@@ -196,7 +211,7 @@ sub structure {
 		my $current_rank = delete $hash_ref->{rank};
 
 		# Now we need to add in any loop variables
-		$self->__populate_lower_loops($dlineage, $tlineage, $hash_ref, $current_rank, $param);
+		$self->__populate_lower_loops($dlineage, $tlineage, $hash_ref, $current_rank, \@params);
 
 		# We are finally ready to get this structure out of the door
 		push @loop, $hash_ref;
@@ -230,10 +245,6 @@ sub __populate_lower_loops {
 	my $comma = ',';
         my $new_dlineage = join $comma , (split /,/, $dlineage), $current_rank;
         my @new_tlineage = @$tlineage;
-        my $thead = pop @new_tlineage;
-	$thead .= ".structure";
-	$thead .= "('$param')" if $param;
-        push @new_tlineage, $thead;
         my @new_vars = $self->{template}->query(loop=>\@new_tlineage);
         foreach my $var (@new_vars) {
 
@@ -250,12 +261,37 @@ sub __populate_lower_loops {
                 # before populating this one
                 my $new_loop = [];
                 $current_row->{structure} = $new_loop;
-                my $new_tlineage = [@new_tlineage, $one];
+                my $new_tlineage = [@new_tlineage, $var];
                 push @{$self->{work_to_be_done}}, sub {
-                	push @$new_loop,  @{$self->structure($param, $new_dlineage, $new_tlineage)};
+                	push @$new_loop,  @{$self->__structure($param, $new_dlineage, $new_tlineage)};
                 };
         }
 	return;
+}
+
+=head2 slice
+
+This function is a variant of the C<< structure >> function, which allows one to specify a part of the menu.
+The first argument is the database lineage which is a string consisting of comma separated numbers. The other arguments 
+are as described under C<< structure >>. The slice function can only be used in the topmost TMPL_LOOP of a template.
+
+=cut
+
+sub slice {
+        my $self = shift;
+        my $dlineage = shift;
+        my $template = "$self->{name}.slice('$dlineage','";
+	my @params = @_;
+        if (scalar(@params) == 1) {
+                # legacy case
+                $template .= "$params[0]')";
+                @params = split /,/, $params[0];
+        }
+        else {
+                $template .= join "','", @params;
+                $template .= "')";
+        }
+        return $self->__structure(\@params, $dlineage, [$template]);
 }
 
 =head1 AUTHOR
@@ -267,10 +303,6 @@ Nicholas Bamber, C<< <nicholas at periapt.co.uk> >>
 Please report any bugs or feature requests to C<bug-cgi-application-plugin-pagelookup at rt.cpan.org>, or through
 the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=CGI-Application-Plugin-PageLookup>.  I will be notified, and then you'll
 automatically be notified of progress on your bug as I make changes.
-
-=head2 AUTOLOAD
-
-AUTOLOAD is quite a fraught subject. There is probably no perfect solution. See http://www.perlmonks.org/?node_id=342804 for a sample of the issues.
 
 =head1 SUPPORT
 
