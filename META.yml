@@ -1,6 +1,6 @@
 ---
 name: CGI-Application-Plugin-PageLookup
-version: 1.7
+version: 1.8
 author:
   - 'Nicholas Bamber <nicholas@periapt.co.uk>'
 abstract: Database driven model framework for CGI::Application
@@ -28,19 +28,19 @@ configure_requires:
 provides:
   CGI::Application::Plugin::PageLookup:
     file: lib/CGI/Application/Plugin/PageLookup.pm
-    version: 1.7
+    version: 1.8
   CGI::Application::Plugin::PageLookup::Href:
     file: lib/CGI/Application/Plugin/PageLookup/Href.pm
-    version: 1.7
+    version: 1.8
   CGI::Application::Plugin::PageLookup::Loop:
     file: lib/CGI/Application/Plugin/PageLookup/Loop.pm
-    version: 1.7
+    version: 1.8
   CGI::Application::Plugin::PageLookup::Menu:
     file: lib/CGI/Application/Plugin/PageLookup/Menu.pm
-    version: 1.7
+    version: 1.8
   CGI::Application::Plugin::PageLookup::Value:
     file: lib/CGI/Application/Plugin/PageLookup/Value.pm
-    version: 1.7
+    version: 1.8
 generated_by: Module::Build version 0.35
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
